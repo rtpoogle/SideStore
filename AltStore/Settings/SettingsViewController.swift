@@ -86,9 +86,8 @@ extension SettingsViewController
         case userCustomizations     // row 9 - User Customizations
 
         static var allCases: [AdvancedSettingsRow] {
-            var rows: [AdvancedSettingsRow] = [.sendFeedback, .refreshAttempts, .refreshSideJITServer]
+            var rows: [AdvancedSettingsRow] = [.sendFeedback, .refreshAttempts, .refreshSideJITServer, .resetPairingFile]
             if !UserDefaults.standard.useOnDeviceAnisette {
-                rows.append(.resetPairingFile)
                 rows.append(.anisetteServers)
             }
             rows.append(contentsOf: [
@@ -393,7 +392,7 @@ private extension SettingsViewController
         let currentActiveTeam = DatabaseManager.shared.activeTeam()
         verboseLog("[SettingsVC] update() called. activeTeam: \(currentActiveTeam?.identifier ?? "nil"), account: \(currentActiveTeam?.account.appleID ?? "nil")")
         
-        if let team = currentActiveTeam
+        if let team = currentActiveTeam, AuthManager.shared.isAuthenticated
         {
             self.accountNameLabel.text = team.name
             self.accountEmailLabel.text = team.account.appleID
@@ -613,7 +612,14 @@ private extension SettingsViewController
         let signOutAction = UIAlertAction(title: NSLocalizedString("Sign Out", comment: ""), style: .destructive) { _ in
             let keepCert = contentVC.isChecked
             let keepAnisette = contentVC.isKeepAnisetteChecked
-            AuthManager.shared.signOut(keepCertificate: keepCert, keepAnisetteData: keepAnisette)
+            let keepAnisetteHeaders = contentVC.isKeepAnisetteHeadersChecked
+            let keepSideSignHeaders = contentVC.isKeepSideSignHeadersChecked
+            AuthManager.shared.signOut(
+                keepCertificate: keepCert,
+                keepAnisetteData: keepAnisette,
+                keepAnisetteHeaders: keepAnisetteHeaders,
+                keepSideSignHeaders: keepSideSignHeaders
+            )
             self.update()
         }
         
@@ -848,8 +854,7 @@ private extension SettingsViewController
     
     @IBAction func followAltStoreGitHub()
     {
-        let safariURL = URL(string: "https://github.com/SideStore")!
-        UIApplication.shared.open(safariURL, options: [:])
+        UIApplication.shared.open(AppConstants.URLs.sideStoreGitHub, options: [:])
     }
 }
 
@@ -1108,16 +1113,12 @@ extension SettingsViewController
                 
                 // Option 1: GitHub
                 alertController.addAction(UIAlertAction(title: "GitHub", style: .default) { _ in
-                    if let githubURL = URL(string: "https://github.com/SideStore/SideStore/issues") {
-                        self.openWebURL(githubURL, preferredTintColor: .altPrimary)
-                    }
+                    self.openWebURL(AppConstants.URLs.sideStoreIssues, preferredTintColor: .altPrimary)
                 })
                 
                 // Option 2: Discord
                 alertController.addAction(UIAlertAction(title: "Discord", style: .default) { _ in
-                    if let discordURL = URL(string: "https://discord.gg/sidestore-949183273383395328") {
-                        self.openWebURL(discordURL, preferredTintColor: .altPrimary)
-                    }
+                    self.openWebURL(AppConstants.URLs.sideStoreDiscord, preferredTintColor: .altPrimary)
                 })
                 
                 #if !os(tvOS)
